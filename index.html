@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>水平思考謎々クイズ（ウミガメのスープ）</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen">
+<div class="max-w-2xl mx-auto p-4 py-8">
+  <h1 class="text-2xl font-bold text-center text-cyan-400 mb-2">🐢 ウミガメのスープ</h1>
+  <p class="text-center text-gray-400 text-sm mb-6">水平思考パズル — Yes/Noで真相に迫れ！</p>
+
+  <!-- スコア表示 -->
+  <div class="flex justify-between items-center bg-gray-800 rounded-lg p-3 mb-6 text-sm">
+    <span class="text-gray-400">問題: <span id="qIndex" class="text-white font-bold">1</span> / 5</span>
+    <span class="text-gray-400">スコア: <span id="scoreDisplay" class="text-yellow-400 font-bold">0</span>点</span>
+    <span class="text-gray-400">ヒント: <span id="hintCount" class="text-orange-400 font-bold">0</span>回使用</span>
+  </div>
+
+  <!-- 問題カード -->
+  <div class="bg-gray-800 rounded-xl p-6 mb-6 shadow-lg border border-gray-700">
+    <div class="text-xs text-cyan-500 font-semibold mb-2 uppercase tracking-widest">状況説明</div>
+    <p id="situation" class="text-lg leading-relaxed text-gray-100"></p>
+  </div>
+
+  <!-- 質問応答エリア -->
+  <div id="qaLog" class="space-y-2 mb-4 max-h-48 overflow-y-auto"></div>
+
+  <!-- 入力フォーム -->
+  <div class="flex gap-2 mb-4">
+    <input id="questionInput" type="text"
+      aria-label="Yes/No質問を入力"
+      placeholder="例: 主人公は男性ですか？"
+      class="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-cyan-500 placeholder-gray-500"
+    />
+    <button id="askBtn"
+      aria-label="質問する"
+      class="bg-cyan-600 hover:bg-cyan-500 px-4 py-2 rounded-lg text-sm font-semibold transition-colors">
+      質問
+    </button>
+  </div>
+
+  <!-- ヒント -->
+  <div class="flex gap-2 mb-4">
+    <button id="hintBtn"
+      aria-label="ヒントを表示"
+      class="flex-1 bg-orange-700 hover:bg-orange-600 px-4 py-2 rounded-lg text-sm font-semibold transition-colors">
+      💡 ヒントを表示
+    </button>
+    <button id="solveBtn"
+      aria-label="正解を見る"
+      class="flex-1 bg-purple-700 hover:bg-purple-600 px-4 py-2 rounded-lg text-sm font-semibold transition-colors">
+      ✅ 正解を見る
+    </button>
+  </div>
+
+  <!-- ヒント表示 -->
+  <div id="hintBox" class="hidden bg-yellow-900 border border-yellow-600 rounded-lg p-4 mb-4 text-sm text-yellow-200"></div>
+
+  <!-- 正解表示 -->
+  <div id="answerBox" class="hidden bg-green-900 border border-green-600 rounded-lg p-4 mb-4">
+    <div class="text-xs text-green-400 font-semibold mb-1 uppercase tracking-widest">真相</div>
+    <p id="answerText" class="text-green-100 text-sm leading-relaxed"></p>
+  </div>
+
+  <!-- 判定ボタン -->
+  <div id="judgeArea" class="hidden flex gap-2 mb-6">
+    <button id="correctBtn"
+      aria-label="正解（真相を見抜いた）"
+      class="flex-1 bg-green-700 hover:bg-green-600 py-3 rounded-lg font-semibold transition-colors">
+      🎯 正解！
+    </button>
+    <button id="wrongBtn"
+      aria-label="不正解（もう少し考える）"
+      class="flex-1 bg-red-700 hover:bg-red-600 py-3 rounded-lg font-semibold transition-colors">
+      ❌ もう少し考える
+    </button>
+  </div>
+
+  <!-- 次の問題 -->
+  <button id="nextBtn"
+    aria-label="次の問題へ"
+    class="hidden w-full bg-cyan-700 hover:bg-cyan-600 py-3 rounded-lg font-semibold transition-colors mb-6">
+    次の問題へ →
+  </button>
+
+  <!-- 結果画面 -->
+  <div id="resultScreen" class="hidden bg-gray-800 rounded-xl p-8 text-center border border-gray-600">
+    <div class="text-5xl mb-4">🏆</div>
+    <div class="text-2xl font-bold text-yellow-400 mb-2">ゲーム終了！</div>
+    <div class="text-gray-300 mb-4">最終スコア: <span id="finalScore" class="text-3xl font-bold text-white"></span>点</div>
+    <div id="rank" class="text-lg mb-6"></div>
+    <button id="restartBtn"
+      aria-label="もう一度プレイ"
+      class="bg-cyan-600 hover:bg-cyan-500 px-8 py-3 rounded-lg font-semibold transition-colors">
+      もう一度プレイ
+    </button>
+  </div>
+</div>
+
+<script>
+function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+const puzzles = [
+  {
+    situation: "ある男が、とあるレストランでウミガメのスープを注文した。一口飲んで、彼は家に帰り、妻を殺した。なぜか？",
+    hints: [
+      "男と妻はかつて難破して無人島に漂着したことがある。",
+      "無人島では食料が尽きかけていた。妻が「ウミガメのスープ」を差し出した。",
+      "レストランで飲んだスープは、本物のウミガメのスープだった。"
+    ],
+    answer: "男は難破した無人島で、妻が「ウミガメのスープ」だと言って出したスープを飲んで生き延びた。しかしレストランで本物のウミガメのスープを飲んで、無人島でのスープが別の肉（妻が調達した人肉）だったと悟り、真実を知って妻を殺した。",
+    keywords: {
+      yes: ["男性","島","スープ","食べた","飲んだ","生き延び","難破","船","海","仕事","妻","結婚","食料","肉","帰宅"],
+      no: ["事故","病気","金","仕事","財産","浮気","喧嘩","女性","子供","毒"],
+      maybe: ["レストラン","料理","味","過去","記憶","思い出"]
+    }
+  },
+  {
+    situation: "ある女性がエレベーターに乗る。毎日、1階から10階まで乗り、帰りは10階から1階まで乗る。しかし晴れた日は7階で降りて歩いて上がり、雨の日は10階まで乗る。なぜか？",
+    hints: [
+      "女性の体には何か制限がある。",
+      "傘を持っているかどうかが関係している。",
+      "7階から10階まで自分で操作できれば問題ない。"
+    ],
+    answer: "女性は身長が低く（小人症）、エレベーターの10階ボタンに届かない。傘を持っているときは傘で10階ボタンを押せるが、晴れで傘がないときは届く最高ボタン7階で降りて歩いて上がる。",
+    keywords: {
+      yes: ["身長","低い","小さい","届かない","ボタン","傘","押す","階段","歩く","女性"],
+      no: ["怖い","病気","金","工事","混んで","電気","緊急","隣人"],
+      maybe: ["毎日","習慣","建物","マンション","アパート"]
+    }
+  },
+  {
+    situation: "一人の男が週に一度、砂漠の真ん中にある小屋を訪れる。小屋には窓も水もない。男は2時間後に遺体で発見された。なぜか？",
+    hints: [
+      "男は外部から来た人物ではない。",
+      "小屋の中に危険なものはなかった。",
+      "男は自分で小屋に閉じ込められた。"
+    ],
+    answer: "男は小屋の中で自殺を試みた。砂漠の灼熱の中、窓も水もない小屋は急速に高温になり、熱中症で死亡した。彼は最初からそのつもりで小屋に入った。",
+    keywords: {
+      yes: ["熱い","高温","熱中症","自殺","意図的","砂漠","太陽","窓","密閉","空気"],
+      no: ["毒","刃物","銃","他殺","事故","迷子","仕事"],
+      maybe: ["扉","鍵","閉じ込め","時間","2時間"]
+    }
+  },
+  {
+    situation: "ある医師が手術室で患者を見て「この患者は私の息子だ」と言った。しかし患者の父親はすでに亡くなっている。なぜか？",
+    hints: [
+      "医師と患者は血縁関係にある。",
+      "医師は男性ではない。",
+      "現代社会では当たり前のことである。"
+    ],
+    answer: "医師は患者の母親である。「医師＝男性」という固定観念によって多くの人が混乱するが、医師は母親なので父親が亡くなっていても「私の息子だ」と言える。",
+    keywords: {
+      yes: ["母親","女性","女医","母","親","血縁","家族"],
+      no: ["養子","双子","嘘","幻","霊","別人"],
+      maybe: ["医師","性別","先生","外科"]
+    }
+  },
+  {
+    situation: "二人の男が廃墟のホテルに入った。翌朝、一人は生きており、もう一人は死んでいた。電気もガスもなく、外では嵐が吹き荒れていた。なぜ一方だけ死んだのか？",
+    hints: [
+      "二人は同じ部屋にはいなかった。",
+      "死んだ男には特別な事情があった。",
+      "嵐と廃墟が組み合わさって危険な状況が生まれた。"
+    ],
+    answer: "死んだ男は探検マニアで、廃墟の最上階に登った。嵐で窓が割れ、強風にさらわれて転落死した。生きていた男は安全な1階で夜を明かした。",
+    keywords: {
+      yes: ["最上階","高い場所","窓","風","転落","落下","嵐","探検","冒険","違う場所","別の部屋","階"],
+      no: ["毒","食べ物","水","病気","喧嘩","殺人","火"],
+      maybe: ["廃墟","ホテル","建物","夜","暗い"]
+    }
+  }
+];
+
+let currentQ = 0;
+let score = 0;
+let hintIndex = 0;
+let answerShown = false;
+let totalHints = 0;
+
+function loadFromStorage() {
+  const saved = localStorage.getItem('riddlerScore');
+  if (saved) score = parseInt(saved) || 0;
+  document.getElementById('scoreDisplay').textContent = score;
+}
+
+function saveScore() {
+  localStorage.setItem('riddlerScore', score);
+}
+
+function renderQuestion() {
+  const p = puzzles[currentQ];
+  document.getElementById('qIndex').textContent = currentQ + 1;
+  document.getElementById('situation').textContent = p.situation;
+  document.getElementById('qaLog').innerHTML = '';
+  document.getElementById('hintBox').classList.add('hidden');
+  document.getElementById('answerBox').classList.add('hidden');
+  document.getElementById('judgeArea').classList.add('hidden');
+  document.getElementById('nextBtn').classList.add('hidden');
+  document.getElementById('hintCount').textContent = totalHints;
+  hintIndex = 0;
+  answerShown = false;
+}
+
+function matchAnswer(input) {
+  const p = puzzles[currentQ];
+  const lower = input.toLowerCase();
+  for (const kw of p.keywords.yes) {
+    if (lower.includes(kw.toLowerCase())) return 'yes';
+  }
+  for (const kw of p.keywords.no) {
+    if (lower.includes(kw.toLowerCase())) return 'no';
+  }
+  for (const kw of p.keywords.maybe) {
+    if (lower.includes(kw.toLowerCase())) return 'maybe';
+  }
+  return 'unknown';
+}
+
+function addQA(question, answer) {
+  const log = document.getElementById('qaLog');
+  const div = document.createElement('div');
+  div.className = 'flex items-start gap-2 text-sm';
+  const labels = { yes: '✅ はい', no: '❌ いいえ', maybe: '🤔 関係あり', unknown: '❓ 判断難しい' };
+  const colors = { yes: 'text-green-400', no: 'text-red-400', maybe: 'text-yellow-400', unknown: 'text-gray-400' };
+  div.innerHTML = `<span class="text-gray-400 shrink-0">Q:</span><span class="text-gray-200 flex-1">${escHtml(question)}</span><span class="${colors[answer]} font-bold shrink-0">${labels[answer]}</span>`;
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+}
+
+document.getElementById('askBtn').addEventListener('click', () => {
+  const input = document.getElementById('questionInput');
+  const q = input.value.trim();
+  if (!q) return;
+  const result = matchAnswer(q);
+  addQA(q, result);
+  input.value = '';
+});
+
+document.getElementById('questionInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') document.getElementById('askBtn').click();
+});
+
+document.getElementById('hintBtn').addEventListener('click', () => {
+  const p = puzzles[currentQ];
+  if (hintIndex >= p.hints.length) return;
+  const hintBox = document.getElementById('hintBox');
+  hintBox.textContent = `ヒント ${hintIndex + 1}: ${p.hints[hintIndex]}`;
+  hintBox.classList.remove('hidden');
+  hintIndex++;
+  totalHints++;
+  document.getElementById('hintCount').textContent = totalHints;
+});
+
+document.getElementById('solveBtn').addEventListener('click', () => {
+  const p = puzzles[currentQ];
+  document.getElementById('answerText').textContent = p.answer;
+  document.getElementById('answerBox').classList.remove('hidden');
+  document.getElementById('judgeArea').classList.remove('hidden');
+  answerShown = true;
+});
+
+document.getElementById('correctBtn').addEventListener('click', () => {
+  const pts = Math.max(10, 30 - hintIndex * 5);
+  score += pts;
+  document.getElementById('scoreDisplay').textContent = score;
+  saveScore();
+  document.getElementById('judgeArea').classList.add('hidden');
+  if (currentQ < puzzles.length - 1) {
+    document.getElementById('nextBtn').classList.remove('hidden');
+  } else {
+    showResult();
+  }
+});
+
+document.getElementById('wrongBtn').addEventListener('click', () => {
+  document.getElementById('judgeArea').classList.add('hidden');
+  if (currentQ < puzzles.length - 1) {
+    document.getElementById('nextBtn').classList.remove('hidden');
+  } else {
+    showResult();
+  }
+});
+
+document.getElementById('nextBtn').addEventListener('click', () => {
+  currentQ++;
+  renderQuestion();
+});
+
+function showResult() {
+  document.querySelector('.max-w-2xl > *:not(#resultScreen)') ;
+  document.getElementById('resultScreen').classList.remove('hidden');
+  document.getElementById('finalScore').textContent = score;
+  const ranks = [
+    { min: 100, label: '🏆 探偵の才能あり！ 素晴らしい！' },
+    { min: 60, label: '🥈 なかなかの推理力！' },
+    { min: 20, label: '🥉 まだまだ修行が必要！' },
+    { min: 0, label: '🌱 ヒントをうまく使おう！' }
+  ];
+  for (const r of ranks) {
+    if (score >= r.min) {
+      document.getElementById('rank').textContent = r.label;
+      break;
+    }
+  }
+}
+
+document.getElementById('restartBtn').addEventListener('click', () => {
+  currentQ = 0;
+  score = 0;
+  totalHints = 0;
+  saveScore();
+  document.getElementById('scoreDisplay').textContent = score;
+  document.getElementById('resultScreen').classList.add('hidden');
+  renderQuestion();
+});
+
+loadFromStorage();
+renderQuestion();
+</script>
+</body>
+</html>
